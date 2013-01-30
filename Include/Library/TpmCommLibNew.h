@@ -109,14 +109,14 @@ typedef struct {
 } TIS_PC_REGISTERS;
 
 typedef struct TIS_TPM {
-	UINT32 Base;
-	UINT32 Irq;
-	UINT32 (*Recv) (UINT8 *, UINT32);
-	UINT32 (*Send) (UINT8 *, UINT32);
-	UINT32 (*Cancel) (void);
-	BOOLEAN (*Status) (UINT32);
-	UINT32 (*BurstCount) (void);
-	UINT32 (*Access) (UINT32);
+	UINTN Base;
+	UINTN Irq;
+	EFI_STATUS EFIAPI (*Recv) (UINT8 *, UINTN);
+	EFI_STATUS EFIAPI (*Send) (UINT8 *, UINTN);
+	EFI_STATUS EFIAPI (*Cancel) (void);
+	BOOLEAN (*Status) (UINTN);
+	EFI_STATUS EFIAPI (*BurstCount) (void);
+	EFI_STATUS EFIAPI (*Access) (UINTN);
 	UINT32 TimeoutA, TimeoutB, TimeoutC, TimeoutD;
 } TIS_TPM_DEVICE;
 

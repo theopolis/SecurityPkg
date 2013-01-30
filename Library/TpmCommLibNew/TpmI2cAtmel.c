@@ -12,40 +12,100 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 **/
 
-
+/* MdePkg/Protocol/SmbusHc */
+#include <Protocol/SmbusHc.h>
 #include "CommonHeader.h"
+
+#define TPM_MAXBUF 1024
+
+EFI_SMBUS_HC_PROTOCOL *Smbus;
 
 EFI_STATUS
 EFIAPI
 TpmI2cAtmelRecv (
   OUT 	UINT8 	*Data,
-  IN 	UINT32 	Length)
+  IN 	UINTN 	Length
+  )
 {
-	/* Read bytes from I2C */
-	return 0;
+	EFI_STATUS Status;
+	EFI_SMBUS_DEVICE_ADDRESS SlaveAddress;
+	UINTN	TpmHeaderLength = 10;
+	UINTN	TpmResponseLength;
+	UINT8	*Buffer[TPM_MAXBUF];
+
+	if (Length > TPM_MAXBUF || Length < 10) {
+		return -1;
+	}
+
+	SlaveAddress.SmbusDeviceAddress = 0x29;
+
+	/* Read header */
+	Status = Smbus->Execute(Smbus, SlaveAddress, 0, EfiSmbusReadBlock, FALSE, &TpmHeaderLength, Buffer);
+	if (EFI_ERROR(Status)) {
+		goto finished;
+	}
+
+	TpmResponseLength = Buffer[4];
+	TpmResponseLength = TpmResponseLength << 8;
+	TpmResponseLength += Buffer[5];
+
+	if (TpmResponseLength <= TpmHeaderLength) {
+		memcpy(Data, Buffer, 10);
+		goto finished;
+	}
+
+	if (TpmResponseLength > Length) {
+		return -1;
+	}
+
+	Smbus->Execute(Smbus, SlaveAddress, 0, EfiSmbusReadBlock, FALSE, &TpmResponseLength, Buffer);
+
+	if (EFI_ERROR(Status)) {
+		goto finished;
+	}
+
+	memcpy(Data, Buffer, TpmResponseLength);
+
+finished:
+	return Status;
 }
 
 EFI_STATUS
 EFIAPI
 TpmI2cAtmelSend (
   OUT 	UINT8 	*Data,
-  IN 	UINT32 	Length)
+  IN 	UINTN 	Length)
 {
+	EFI_STATUS Status;
+	EFI_SMBUS_DEVICE_ADDRESS SlaveAddress;
+
+	if (Length > TPM_MAXBUF) {
+		return -1;
+	}
+
+	SlaveAddress.SmbusDeviceAddress = 0x29;
+
 	/* Send bytes over I2C */
-	return 0;
+	Status = Smbus->Execute(Smbus, SlaveAddress, 0, EfiSmbusWriteBlock, FALSE, &Length, Data);
+	if (EFI_ERROR(Status)) {
+		memset(Data, 0, Length);
+	}
+
+	return Status;
 }
 
-UINT8
+EFI_STATUS
+EFIAPI
 TpmI2cAtmelAccess (
-  IN 	UINT32	Request)
+  IN 	UINTN	Request)
 {
 	/* No access register */
 	return 0;
 }
 
-UINT8
+BOOLEAN
 TpmI2cAtmelStatus (
-  IN 	UINT32	Request)
+  IN 	UINTN	Request)
 {
 	/* No status register */
 	return 0;
